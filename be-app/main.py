@@ -13,7 +13,7 @@ import cgi
 class S(BaseHTTPRequestHandler):
     
     #-------------------------------- ROBERTO -------------------------
-    def processImage(self, imgBase64):
+    def processImage(self, imgBase64, idNft):
         return imgBase64
     #-------------------------------- ROBERTO -------------------------
 
@@ -47,7 +47,7 @@ class S(BaseHTTPRequestHandler):
                 str(self.path), str(self.headers), post_data.decode('utf-8'))
         
         if (self.path == '/process-image'):
-            processedImage = self.processImage(obj['img'])
+            processedImage = self.processImage(obj['img'], obj['id'])
             out = {
                 'processed': processedImage
             }
