@@ -1,2 +1,6 @@
 
 .DS_Store
+
+fe-app/node_modules
+
+fe-app/.angular
