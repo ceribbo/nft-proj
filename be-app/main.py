@@ -8,13 +8,16 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 import json
 import cgi
+from PIL import Image
+from io import BytesIO
+import base64
 
 
 class S(BaseHTTPRequestHandler):
     
     #-------------------------------- ROBERTO -------------------------
-    def processImage(self, imgBase64, idNft):
-        return imgBase64
+    def processImage(self, img, idNft):
+        return img
     #-------------------------------- ROBERTO -------------------------
 
     def _set_response(self):
@@ -47,9 +50,13 @@ class S(BaseHTTPRequestHandler):
                 str(self.path), str(self.headers), post_data.decode('utf-8'))
         
         if (self.path == '/process-image'):
-            processedImage = self.processImage(obj['img'], obj['id'])
+            img = Image.open(BytesIO(base64.b64decode(obj['img'])))
+            processedImage = self.processImage(img, obj['id'])
+            buffered = BytesIO()
+            processedImage.save(buffered, format="JPEG")
+            img_str = base64.b64encode(buffered.getvalue())
             out = {
-                'processed': processedImage
+                'processed': obj['img']
             }
 
             self._set_response()
