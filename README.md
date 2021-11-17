@@ -18,3 +18,6 @@ C'è un un'unica funzione che però prende in input il base64 dell'immagine scat
 Insieme all'immagine della webcam in input arriva anche l'id dell'nft su cui vogliamo fare la personalizzazione, per il momento le immagini sono disponibili nella cartella fe-app/src/app/assets/nft, sono 8, chiaramente l'id che arriva in input sulla chiamata corrisponde al nome del file.
 Fammi sapere se hai problemi.
 Baci <3
+
+# Model
+Per installare il modello andare nella cartella be-app e lanciare "pip install -r requirements.txt". Se il comando fallisce, controllare di avere installato python e pip
