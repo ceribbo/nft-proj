@@ -4,20 +4,63 @@ Very simple HTTP server in python for logging requests
 Usage::
     ./server.py [<port>]
 """
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import atexit
+import base64
+import cgi
 import logging
 import json
-import cgi
-from PIL import Image
 from io import BytesIO
-import base64
+from pathlib import Path
+from PIL import Image, ImageCms
+
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+from style_transfer import *
+
+def prof_to_prof(image, src_prof, dst_prof, **kwargs):
+    src_prof = io.BytesIO(src_prof)
+    dst_prof = io.BytesIO(dst_prof)
+    return ImageCms.profileToProfile(image, src_prof, dst_prof, **kwargs)
+
+
+def load_image(path, proof_prof=None):
+    srgb_profile = (Path(__file__).resolve().parent / 'sRGB Profile.icc').read_bytes()
+    src_prof = dst_prof = srgb_profile
+    try:
+        image = Image.open(path)
+        if 'icc_profile' in image.info:
+            src_prof = image.info['icc_profile']
+        else:
+            image = image.convert('RGB')
+        if proof_prof is None:
+            if src_prof == dst_prof:
+                return image.convert('RGB')
+            return prof_to_prof(image, src_prof, dst_prof, outputMode='RGB')
+        proof_prof = Path(proof_prof).read_bytes()
+        cmyk = prof_to_prof(image, src_prof, proof_prof, outputMode='CMYK')
+        return prof_to_prof(cmyk, proof_prof, dst_prof, outputMode='RGB')
+    except OSError as err:
+        print_error(err)
+        sys.exit(1)
 
 
 class S(BaseHTTPRequestHandler):
-    
+
     #-------------------------------- ROBERTO -------------------------
     def processImage(self, img, idNft):
-        return img
+        st_model = StyleTransfer()
+
+        content_img = img
+        style_img = load_image(f"nft/{idNft}.jpeg")
+
+        image_type = "pil"
+        callback = Callback(st_model, image_type=image_type)
+        atexit.register(callback.close)
+
+        st_model.stylize(content_img, [style_img], end_scale=128, callback=callback)
+        output_img = st_model.get_image()
+        return output_img
+
     #-------------------------------- ROBERTO -------------------------
 
     def _set_response(self):
@@ -35,7 +78,7 @@ class S(BaseHTTPRequestHandler):
 
     def do_POST(self):
         ctype, pdict = cgi.parse_header(self.headers['content-type'])
-        
+
         # refuse to receive non-json content
         if ctype != 'application/json':
             self.send_response(400)
@@ -44,11 +87,11 @@ class S(BaseHTTPRequestHandler):
 
         content_length = int(self.headers['Content-Length']) # <--- Gets the size of data
         post_data = self.rfile.read(content_length) # <--- Gets the data itself
-        
+
         obj = json.loads(post_data)
         logging.info("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n",
                 str(self.path), str(self.headers), post_data.decode('utf-8'))
-        
+
         if (self.path == '/process-image'):
             img = Image.open(BytesIO(base64.b64decode(obj['img'])))
             processedImage = self.processImage(img, obj['id'])
@@ -61,7 +104,7 @@ class S(BaseHTTPRequestHandler):
 
             self._set_response()
             self.wfile.write(json.dumps(out).encode())
-    
+
     def do_OPTIONS(self):
         self._set_response()
 
@@ -84,5 +127,3 @@ if __name__ == '__main__':
         run(port=int(argv[1]))
     else:
         run()
-
-        
