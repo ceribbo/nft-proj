@@ -57,7 +57,7 @@ class S(BaseHTTPRequestHandler):
         callback = Callback(st_model, image_type=image_type)
         atexit.register(callback.close)
 
-        st_model.stylize(content_img, [style_img], end_scale=128, callback=callback)
+        st_model.stylize(content_img, [style_img], end_scale=128, callback=callback, initial_iterations=1000)
         output_img = st_model.get_image()
         return output_img
 
@@ -98,8 +98,9 @@ class S(BaseHTTPRequestHandler):
             buffered = BytesIO()
             processedImage.save(buffered, format="JPEG")
             img_str = base64.b64encode(buffered.getvalue())
+            
             out = {
-                'processed': obj['img']
+                'processed': img_str.decode('utf-8')
             }
 
             self._set_response()
